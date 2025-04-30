@@ -6,6 +6,8 @@ import Button from './ui/Button';
 import { formatFileSize } from '../utils/helpers';
 import { SortableVideoItem } from './SortableVideoItem';
 import { SortableCollectionItem } from './SortableCollectionItem';
+import { createCollection, deleteCollection, moveVideoToCollection, removeVideoFromCollection, getCollectionContents } from '../services/youtube';
+import toast from 'react-hot-toast';
 
 interface VideoLibraryProps {
   downloadHistory: Array<{
@@ -28,8 +30,8 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [showNewCollectionInput, setShowNewCollectionInput] = useState(false);
+  const [collectionVideos, setCollectionVideos] = useState<typeof downloadHistory>([]);
 
-  // Load collections from localStorage on mount
   useEffect(() => {
     try {
       const savedCollections = localStorage.getItem('videoCollections');
@@ -44,7 +46,22 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
     }
   }, []);
 
-  // Save collections to localStorage whenever they change
+  useEffect(() => {
+    if (selectedCollection) {
+      loadCollectionContents(selectedCollection);
+    }
+  }, [selectedCollection]);
+
+  const loadCollectionContents = async (collectionName: string) => {
+    try {
+      const contents = await getCollectionContents(collectionName);
+      setCollectionVideos(contents);
+    } catch (error) {
+      console.error('Error loading collection contents:', error);
+      toast.error('Failed to load collection contents');
+    }
+  };
+
   useEffect(() => {
     try {
       localStorage.setItem('videoCollections', JSON.stringify(collections));
@@ -53,7 +70,7 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
     }
   }, [collections]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over || !active) return;
@@ -61,79 +78,117 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
     const videoId = active.id as string;
     const collectionId = over.id as string;
 
-    // If dragging to the same collection, ignore
     const targetCollection = collections.find(c => c.id === collectionId);
-    if (targetCollection?.videos.includes(videoId)) return;
+    if (!targetCollection) return;
 
-    setCollections(prevCollections => {
-      // Remove video from all collections first
-      const withoutVideo = prevCollections.map(collection => ({
-        ...collection,
-        videos: collection.videos.filter(id => id !== videoId)
-      }));
+    const video = downloadHistory.find(v => v.videoId === videoId);
+    if (!video) return;
 
-      // Add video to the target collection
-      return withoutVideo.map(collection => {
-        if (collection.id === collectionId) {
-          return {
-            ...collection,
-            videos: [...collection.videos, videoId]
-          };
-        }
-        return collection;
+    try {
+      await moveVideoToCollection(targetCollection.name, videoId, video.filename);
+      
+      setCollections(prevCollections => {
+        const withoutVideo = prevCollections.map(collection => ({
+          ...collection,
+          videos: collection.videos.filter(id => id !== videoId)
+        }));
+
+        return withoutVideo.map(collection => {
+          if (collection.id === collectionId) {
+            return {
+              ...collection,
+              videos: [...collection.videos, videoId]
+            };
+          }
+          return collection;
+        });
       });
-    });
+
+      if (selectedCollection === targetCollection.name) {
+        loadCollectionContents(targetCollection.name);
+      }
+
+      toast.success('Video moved to collection successfully');
+    } catch (error) {
+      console.error('Error moving video:', error);
+      toast.error('Failed to move video to collection');
+    }
   };
 
-  const createNewCollection = () => {
+  const createNewCollection = async () => {
     if (newCollectionName.trim()) {
-      const newCollection: Collection = {
-        id: `collection-${Date.now()}`,
-        name: newCollectionName.trim(),
-        videos: []
-      };
-      setCollections(prev => [...prev, newCollection]);
-      setNewCollectionName('');
-      setShowNewCollectionInput(false);
+      try {
+        await createCollection(newCollectionName.trim());
+        
+        const newCollection: Collection = {
+          id: `collection-${Date.now()}`,
+          name: newCollectionName.trim(),
+          videos: []
+        };
+        
+        setCollections(prev => [...prev, newCollection]);
+        setNewCollectionName('');
+        setShowNewCollectionInput(false);
+        toast.success('Collection created successfully');
+      } catch (error) {
+        console.error('Error creating collection:', error);
+        toast.error('Failed to create collection');
+      }
     }
   };
 
-  const deleteCollection = (collectionId: string) => {
-    setCollections(prev => prev.filter(c => c.id !== collectionId));
-    if (selectedCollection === collectionId) {
-      setSelectedCollection(null);
-    }
-  };
-
-  const getCollectionVideos = (collectionId: string) => {
+  const handleDeleteCollection = async (collectionId: string) => {
     const collection = collections.find(c => c.id === collectionId);
-    if (!collection) return [];
-    return downloadHistory.filter(video => collection.videos.includes(video.videoId));
+    if (!collection) return;
+
+    try {
+      await deleteCollection(collection.name);
+      setCollections(prev => prev.filter(c => c.id !== collectionId));
+      if (selectedCollection === collection.name) {
+        setSelectedCollection(null);
+        setCollectionVideos([]);
+      }
+      toast.success('Collection deleted successfully');
+    } catch (error) {
+      console.error('Error deleting collection:', error);
+      toast.error('Failed to delete collection');
+    }
   };
 
-  const removeVideoFromCollection = (videoId: string, collectionId: string) => {
-    setCollections(prevCollections => 
-      prevCollections.map(collection => {
-        if (collection.id === collectionId) {
-          return {
-            ...collection,
-            videos: collection.videos.filter(id => id !== videoId)
-          };
-        }
-        return collection;
-      })
-    );
+  const handleRemoveVideoFromCollection = async (videoId: string, filename: string) => {
+    if (!selectedCollection) return;
+
+    try {
+      await removeVideoFromCollection(selectedCollection, filename);
+      setCollectionVideos(prev => prev.filter(video => video.videoId !== videoId));
+      setCollections(prevCollections => 
+        prevCollections.map(collection => {
+          if (collection.name === selectedCollection) {
+            return {
+              ...collection,
+              videos: collection.videos.filter(id => id !== videoId)
+            };
+          }
+          return collection;
+        })
+      );
+      toast.success('Video removed from collection successfully');
+    } catch (error) {
+      console.error('Error removing video:', error);
+      toast.error('Failed to remove video from collection');
+    }
   };
 
   const handleCollectionClick = (collectionId: string) => {
-    setSelectedCollection(prevSelected => 
-      prevSelected === collectionId ? null : collectionId
-    );
+    const collection = collections.find(c => c.id === collectionId);
+    if (collection) {
+      setSelectedCollection(prevSelected => 
+        prevSelected === collection.name ? null : collection.name
+      );
+    }
   };
 
-  const displayedVideos = selectedCollection
-    ? getCollectionVideos(selectedCollection)
-    : downloadHistory;
+  const displayedVideos = selectedCollection ? collectionVideos : downloadHistory;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -178,12 +233,12 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
                 <div key={collection.id} className="relative group">
                   <SortableCollectionItem
                     collection={collection}
-                    isSelected={selectedCollection === collection.id}
+                    isSelected={selectedCollection === collection.name}
                     onClick={() => handleCollectionClick(collection.id)}
                     videoCount={collection.videos.length}
                   />
                   <button
-                    onClick={() => deleteCollection(collection.id)}
+                    onClick={() => handleDeleteCollection(collection.id)}
                     className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -202,7 +257,7 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-700 mb-4">
                 {selectedCollection
-                  ? `Videos in ${collections.find(c => c.id === selectedCollection)?.name}`
+                  ? `Videos in ${collections.find(c => c.name === selectedCollection)?.name}`
                   : 'All Videos'}
               </h3>
               
@@ -214,7 +269,7 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
                       video={video}
                       formatFileSize={formatFileSize}
                       onRemove={selectedCollection ? 
-                        () => removeVideoFromCollection(video.videoId, selectedCollection) : 
+                        () => handleRemoveVideoFromCollection(video.videoId, video.filename) : 
                         undefined}
                     />
                   ))}
