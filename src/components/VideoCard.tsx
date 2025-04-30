@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Clock, Eye, ThumbsUp, User } from 'lucide-react';
+import { Download, Clock, Eye, ThumbsUp, User, Play, X, CheckCircle2 } from 'lucide-react';
 import { VideoItem } from '../types';
 import Button from './ui/Button';
 import { formatDate, formatDuration, formatViewCount } from '../utils/helpers';
@@ -9,19 +9,33 @@ import toast from 'react-hot-toast';
 
 interface VideoCardProps {
   video: VideoItem;
+  onDownloadComplete: () => void;
+  isDownloaded: boolean;
+  isViewed: boolean;
+  onVideoViewed: (videoId: string) => void;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
+const VideoCard: React.FC<VideoCardProps> = ({ 
+  video, 
+  onDownloadComplete, 
+  isDownloaded,
+  isViewed,
+  onVideoViewed
+}) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadFormat, setDownloadFormat] = useState<'video' | 'audio'>('video');
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [localIsDownloaded, setLocalIsDownloaded] = useState(isDownloaded);
 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
-      const fileUrl = await downloadVideo(video.id.videoId, downloadFormat);
+      const fileUrl = await downloadVideo(video.id.videoId, downloadFormat, video.snippet.title);
       setDownloadUrl(fileUrl);
+      setLocalIsDownloaded(true);
       toast.success(`${downloadFormat === 'video' ? 'Video' : 'Audio'} downloaded successfully!`);
+      onDownloadComplete();
     } catch (error) {
       toast.error('Failed to download. Please try again.');
       console.error('Download error:', error);
@@ -30,17 +44,63 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
     }
   };
 
+  const handlePreviewClick = () => {
+    setShowPreview(true);
+    if (!isViewed) {
+      onVideoViewed(video.id.videoId);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
-      <div className="aspect-video relative">
-        <img
-          src={video.snippet.thumbnails.high.url}
-          alt={video.snippet.title}
-          className="w-full h-full object-cover"
-        />
-        {video.contentDetails?.duration && (
-          <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-            {formatDuration(video.contentDetails.duration)}
+      <div className="aspect-video relative group">
+        {showPreview ? (
+          <div className="relative w-full h-full">
+            <iframe
+              src={`https://www.youtube.com/embed/${video.id.videoId}?autoplay=1&enablejsapi=1`}
+              title={video.snippet.title}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full hover:bg-opacity-70 transition-opacity z-10"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="cursor-pointer" onClick={handlePreviewClick}>
+            <img
+              src={video.snippet.thumbnails.high.url}
+              alt={video.snippet.title}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all duration-200">
+              <div className="transform scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200">
+                <Play className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            {video.contentDetails?.duration && (
+              <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                {formatDuration(video.contentDetails.duration)}
+              </div>
+            )}
+            <div className="absolute top-2 left-2 flex gap-2">
+              {isViewed && (
+                <div className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                  <Eye className="h-3 w-3 mr-1" />
+                  Viewed
+                </div>
+              )}
+              {(isDownloaded || localIsDownloaded) && (
+                <div className="bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Downloaded
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -73,7 +133,7 @@ const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
           <Select
             className="sm:w-1/2"
             options={[
-              { value: 'video', label: 'Video (MP4)' },
+              { value: 'video', label: 'Video (1080p MP4)' },
               { value: 'audio', label: 'Audio (MP3)' }
             ]}
             value={downloadFormat}

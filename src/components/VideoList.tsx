@@ -5,9 +5,20 @@ import VideoCard from './VideoCard';
 interface VideoListProps {
   videos: VideoItem[];
   loading: boolean;
+  onDownloadComplete: () => void;
+  downloadHistory: Array<{ videoId: string }>;
+  viewedVideos: Set<string>;
+  setViewedVideos: (videos: Set<string>) => void;
 }
 
-const VideoList: React.FC<VideoListProps> = ({ videos, loading }) => {
+const VideoList: React.FC<VideoListProps> = ({ 
+  videos, 
+  loading, 
+  onDownloadComplete,
+  downloadHistory,
+  viewedVideos,
+  setViewedVideos
+}) => {
   if (loading) {
     return (
       <div className="w-full py-8">
@@ -42,7 +53,19 @@ const VideoList: React.FC<VideoListProps> = ({ videos, loading }) => {
     <div className="w-full py-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {videos.map((video) => (
-          <VideoCard key={video.id.videoId} video={video} />
+          <VideoCard 
+            key={video.id.videoId} 
+            video={video} 
+            onDownloadComplete={onDownloadComplete}
+            isDownloaded={downloadHistory.some(item => item.videoId === video.id.videoId)}
+            isViewed={viewedVideos.has(video.id.videoId)}
+            onVideoViewed={(videoId) => {
+              const newViewedVideos = new Set(viewedVideos);
+              newViewedVideos.add(videoId);
+              setViewedVideos(newViewedVideos);
+              localStorage.setItem('viewedVideos', JSON.stringify(Array.from(newViewedVideos)));
+            }}
+          />
         ))}
       </div>
     </div>

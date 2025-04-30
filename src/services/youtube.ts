@@ -60,16 +60,39 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
 };
 
 // Download a video
-export const downloadVideo = async (videoId: string, format: 'video' | 'audio'): Promise<string> => {
+export const downloadVideo = async (videoId: string, format: 'video' | 'audio', title: string): Promise<string> => {
   try {
     const response = await axios.post('http://localhost:3001/api/download', { 
       videoId,
-      format
+      format,
+      title
     });
     
     return response.data.fileUrl;
   } catch (error) {
     console.error('Error downloading video:', error);
+    throw error;
+  }
+};
+
+// Get download history
+export const getDownloadHistory = async () => {
+  try {
+    const response = await axios.get('http://localhost:3001/api/downloads');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching download history:', error);
+    throw error;
+  }
+};
+
+// Clear download history
+export const clearDownloadHistory = async () => {
+  try {
+    const response = await axios.delete('http://localhost:3001/api/downloads');
+    return response.data;
+  } catch (error) {
+    console.error('Error clearing download history:', error);
     throw error;
   }
 };
