@@ -33,6 +33,11 @@ export const SortableVideoItem: React.FC<SortableVideoItemProps> = ({
     transition,
   };
 
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowPreview(true);
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -41,7 +46,7 @@ export const SortableVideoItem: React.FC<SortableVideoItemProps> = ({
       {...listeners}
       className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
     >
-      <div className="aspect-video relative group cursor-move">
+      <div className="aspect-video relative cursor-move">
         {showPreview ? (
           <div className="relative w-full h-full">
             <iframe
@@ -56,24 +61,25 @@ export const SortableVideoItem: React.FC<SortableVideoItemProps> = ({
                 e.stopPropagation();
                 setShowPreview(false);
               }}
-              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full hover:bg-opacity-70 transition-opacity"
+              className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full hover:bg-opacity-70 transition-opacity z-10"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <div onClick={(e) => {
-            e.stopPropagation();
-            setShowPreview(true);
-          }}>
+          <div>
             <img
               src={`https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`}
               alt={video.title || video.filename}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all duration-200">
-              <Play className="h-12 w-12 text-white transform scale-90 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200" />
-            </div>
+            <button
+              onClick={handlePlayClick}
+              className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg"
+            >
+              <Play className="h-4 w-4" />
+              <span>Play</span>
+            </button>
           </div>
         )}
       </div>

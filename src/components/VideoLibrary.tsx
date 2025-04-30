@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, closestCenter } from '@dnd-kit/core';
 import { SortableContext, arrayMove } from '@dnd-kit/sortable';
-import { Folder, Plus, Video } from 'lucide-react';
+import { Folder, Plus, Video, Trash2 } from 'lucide-react';
 import Button from './ui/Button';
 import { formatFileSize } from '../utils/helpers';
 import { SortableVideoItem } from './SortableVideoItem';
@@ -31,15 +31,16 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
 
   // Load collections from localStorage on mount
   useEffect(() => {
-    const savedCollections = localStorage.getItem('videoCollections');
-    if (savedCollections) {
-      try {
-        const parsed = JSON.parse(savedCollections);
-        setCollections(parsed);
-      } catch (error) {
-        console.error('Error parsing saved collections:', error);
-        localStorage.removeItem('videoCollections');
+    try {
+      const savedCollections = localStorage.getItem('videoCollections');
+      if (savedCollections) {
+        const parsedCollections = JSON.parse(savedCollections);
+        if (Array.isArray(parsedCollections)) {
+          setCollections(parsedCollections);
+        }
       }
+    } catch (error) {
+      console.error('Error loading collections:', error);
     }
   }, []);
 
@@ -94,6 +95,13 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
       setCollections(prev => [...prev, newCollection]);
       setNewCollectionName('');
       setShowNewCollectionInput(false);
+    }
+  };
+
+  const deleteCollection = (collectionId: string) => {
+    setCollections(prev => prev.filter(c => c.id !== collectionId));
+    if (selectedCollection === collectionId) {
+      setSelectedCollection(null);
     }
   };
 
@@ -167,13 +175,20 @@ const VideoLibrary: React.FC<VideoLibraryProps> = ({ downloadHistory }) => {
             <h3 className="font-semibold text-gray-700 mb-2">Collections</h3>
             <SortableContext items={collections.map(c => c.id)}>
               {collections.map(collection => (
-                <SortableCollectionItem
-                  key={collection.id}
-                  collection={collection}
-                  isSelected={selectedCollection === collection.id}
-                  onClick={() => handleCollectionClick(collection.id)}
-                  videoCount={collection.videos.length}
-                />
+                <div key={collection.id} className="relative group">
+                  <SortableCollectionItem
+                    collection={collection}
+                    isSelected={selectedCollection === collection.id}
+                    onClick={() => handleCollectionClick(collection.id)}
+                    videoCount={collection.videos.length}
+                  />
+                  <button
+                    onClick={() => deleteCollection(collection.id)}
+                    className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               ))}
             </SortableContext>
             {collections.length === 0 && (
