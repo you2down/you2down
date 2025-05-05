@@ -21,6 +21,12 @@ app.use(cors());
 app.use(express.json());
 app.use('/downloads', express.static(downloadsDir));
 
+// Serve static files in production
+if (process.env.NODE_ENV === 'production') {
+  const distPath = path.join(__dirname, '../dist');
+  app.use(express.static(distPath));
+}
+
 // Get download history
 app.get('/api/downloads', (req, res) => {
   fs.readdir(downloadsDir, (err, files) => {
@@ -115,6 +121,20 @@ app.post('/api/download', async (req, res) => {
       res.json({ success: true, fileUrl });
     });
   });
+});
+
+// Catch-all route to serve React app
+app.get('*', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).send('Application not built. Please run npm run build first.');
+    }
+  } else {
+    res.status(404).send('Not found');
+  }
 });
 
 // Start the server
