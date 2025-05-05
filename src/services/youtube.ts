@@ -7,7 +7,7 @@ const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 // Search for videos
 export const searchVideos = async (params: SearchParams): Promise<SearchResponse> => {
   try {
-    const { query, maxResults = 10, videoDuration = 'any', publishedAfter, publishedBefore, order = 'relevance' } = params;
+    const { query, maxResults = 10, videoDuration = 'any', publishedAfter, publishedBefore } = params;
     
     const response = await axios.get(`${BASE_URL}/search`, {
       params: {
@@ -18,7 +18,7 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
         videoDuration,
         publishedAfter,
         publishedBefore,
-        order,
+        order: 'date', // Force date ordering
         key: API_KEY
       }
     });
@@ -46,6 +46,11 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
         contentDetails: details?.contentDetails,
         statistics: details?.statistics
       };
+    });
+
+    // Sort items by publishedAt in descending order (newest first)
+    itemsWithDetails.sort((a: VideoItem, b: VideoItem) => {
+      return new Date(b.snippet.publishedAt).getTime() - new Date(a.snippet.publishedAt).getTime();
     });
     
     return {
