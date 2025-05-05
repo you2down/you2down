@@ -62,7 +62,7 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
 // Download a video
 export const downloadVideo = async (videoId: string, format: 'video' | 'audio', title: string): Promise<string> => {
   try {
-    const response = await axios.post('http://localhost:3001/api/download', { 
+    const response = await axios.post('/api/download', { 
       videoId,
       format,
       title
@@ -78,7 +78,7 @@ export const downloadVideo = async (videoId: string, format: 'video' | 'audio', 
 // Get download history
 export const getDownloadHistory = async () => {
   try {
-    const response = await axios.get('http://localhost:3001/api/downloads');
+    const response = await axios.get('/api/downloads');
     return response.data;
   } catch (error) {
     console.error('Error fetching download history:', error);
@@ -89,7 +89,7 @@ export const getDownloadHistory = async () => {
 // Clear download history
 export const clearDownloadHistory = async () => {
   try {
-    const response = await axios.delete('http://localhost:3001/api/downloads');
+    const response = await axios.delete('/api/downloads');
     return response.data;
   } catch (error) {
     console.error('Error clearing download history:', error);
