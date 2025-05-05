@@ -23,8 +23,10 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
       }
     });
 
+    // Get video IDs to fetch additional details
     const videoIds = response.data.items.map((item: any) => item.id.videoId).join(',');
     
+    // Get content details and statistics for the videos
     const videoDetailsResponse = await axios.get(`${BASE_URL}/videos`, {
       params: {
         part: 'contentDetails,statistics',
@@ -33,6 +35,7 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
       }
     });
     
+    // Merge the search results with content details and statistics
     const itemsWithDetails = response.data.items.map((item: VideoItem) => {
       const details = videoDetailsResponse.data.items.find(
         (detail: any) => detail.id === item.id.videoId
@@ -90,64 +93,6 @@ export const clearDownloadHistory = async () => {
     return response.data;
   } catch (error) {
     console.error('Error clearing download history:', error);
-    throw error;
-  }
-};
-
-// Create a new collection
-export const createCollection = async (name: string) => {
-  try {
-    const response = await axios.post('http://localhost:3001/api/collections', { name });
-    return response.data;
-  } catch (error) {
-    console.error('Error creating collection:', error);
-    throw error;
-  }
-};
-
-// Delete a collection
-export const deleteCollection = async (name: string) => {
-  try {
-    const response = await axios.delete(`http://localhost:3001/api/collections/${name}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting collection:', error);
-    throw error;
-  }
-};
-
-// Move video to collection
-export const moveVideoToCollection = async (collectionName: string, videoId: string, filename: string) => {
-  try {
-    const response = await axios.post(`http://localhost:3001/api/collections/${collectionName}/videos`, {
-      videoId,
-      filename
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error moving video to collection:', error);
-    throw error;
-  }
-};
-
-// Remove video from collection
-export const removeVideoFromCollection = async (collectionName: string, filename: string) => {
-  try {
-    const response = await axios.delete(`http://localhost:3001/api/collections/${collectionName}/videos/${filename}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error removing video from collection:', error);
-    throw error;
-  }
-};
-
-// Get collection contents
-export const getCollectionContents = async (name: string) => {
-  try {
-    const response = await axios.get(`http://localhost:3001/api/collections/${name}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error getting collection contents:', error);
     throw error;
   }
 };
