@@ -107,10 +107,21 @@ const writeMetadata = (data) => {
   }
 };
 
-app.use(cors());
+// Configure CORS with specific options
+const corsOptions = {
+  origin: ['http://localhost:5173', 'https://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/downloads', express.static(downloadsDir));
-app.use('/collections', express.static(collectionsDir));
+
+// Serve static files with correct paths
+app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
+app.use('/collections', express.static(path.join(__dirname, 'collections')));
 
 // Get download history
 app.get('/api/downloads', (req, res) => {
