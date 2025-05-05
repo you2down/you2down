@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import Input from './ui/Input';
 import Button from './ui/Button';
 import Select from './ui/Select';
+import { VideoTypeFilter } from '../types';
 
 interface SearchBarProps {
   onSearch: (query: string, filters: SearchFilters) => void;
@@ -13,6 +14,7 @@ export interface SearchFilters {
   duration: string;
   publishedAfter: string;
   order: string;
+  videoType: VideoTypeFilter;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
@@ -20,7 +22,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
   const [filters, setFilters] = useState<SearchFilters>({
     duration: 'any',
     publishedAfter: '',
-    order: 'relevance'
+    order: 'relevance',
+    videoType: 'videos'
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -32,7 +35,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
   };
 
   const handleFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
   ) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -67,6 +70,27 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
           >
             {showFilters ? 'Hide Filters' : 'Show Filters'}
           </Button>
+        </div>
+
+        <div className="mt-4">
+          <div className="flex gap-4 items-center">
+            <label className="text-sm font-medium text-gray-700">Video Type:</label>
+            <div className="flex gap-4">
+              {['videos', 'shorts', 'both'].map((type) => (
+                <label key={type} className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    name="videoType"
+                    value={type}
+                    checked={filters.videoType === type}
+                    onChange={handleFilterChange}
+                    className="form-radio h-4 w-4 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 capitalize">{type}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
         
         {showFilters && (
