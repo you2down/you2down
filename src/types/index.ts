@@ -27,6 +27,8 @@ export interface SearchParams {
   publishedAfter?: string;
   publishedBefore?: string;
   videoType?: VideoTypeFilter;
+  pageToken?: string;
+  order?: string;
 }
 
 export interface DownloadOptions {
@@ -45,6 +47,7 @@ export interface SearchResponse {
   items: VideoItem[];
   nextPageToken?: string;
   prevPageToken?: string;
+  totalResults?: number;
 }
 
 export interface VideoItem {

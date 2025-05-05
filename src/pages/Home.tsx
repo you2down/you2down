@@ -5,7 +5,7 @@ import VideoList from '../components/VideoList';
 import { VideoItem } from '../types';
 import { searchVideos, getDownloadHistory, clearDownloadHistory, downloadVideo } from '../services/youtube';
 import toast, { Toaster } from 'react-hot-toast';
-import { Trash2, Download } from 'lucide-react';
+import { Trash2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 interface DownloadHistory {
@@ -24,6 +24,12 @@ const Home: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [viewedVideos, setViewedVideos] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [currentQuery, setCurrentQuery] = useState('');
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | undefined>();
+  const [prevPageToken, setPrevPageToken] = useState<string | undefined>();
+  const [totalResults, setTotalResults] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     loadDownloadHistory();
@@ -74,24 +80,35 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleSearch = async (query: string, filters: SearchFilters) => {
+  const handleSearch = async (query: string, filters: SearchFilters, pageToken?: string) => {
     try {
       setIsSearching(true);
+      setCurrentQuery(query);
+      setCurrentFilters(filters);
       
       const searchParams = {
         query,
         maxResults: 12,
         videoDuration: filters.duration as 'any' | 'short' | 'medium' | 'long',
         publishedAfter: filters.publishedAfter || undefined,
-        order: filters.order as 'date' | 'relevance' | 'rating' | 'viewCount' | 'title'
+        order: filters.order as 'date' | 'relevance' | 'rating' | 'viewCount' | 'title',
+        videoType: filters.videoType,
+        pageToken
       };
       
       const response = await searchVideos(searchParams);
       setVideos(response.items);
+      setNextPageToken(response.nextPageToken);
+      setPrevPageToken(response.prevPageToken);
+      setTotalResults(response.totalResults || 0);
       setHasSearched(true);
       
       if (response.items.length === 0) {
         toast.error('No videos found. Try a different search or filters.');
+      }
+
+      if (!pageToken) {
+        setCurrentPage(1);
       }
     } catch (error) {
       console.error('Search error:', error);
@@ -99,6 +116,16 @@ const Home: React.FC = () => {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handlePageChange = async (direction: 'next' | 'prev') => {
+    if (!currentQuery || !currentFilters) return;
+    
+    const pageToken = direction === 'next' ? nextPageToken : prevPageToken;
+    if (!pageToken) return;
+    
+    await handleSearch(currentQuery, currentFilters, pageToken);
+    setCurrentPage(prev => direction === 'next' ? prev + 1 : prev - 1);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -222,17 +249,47 @@ const Home: React.FC = () => {
             </div>
           )}
           
-          <SearchBar onSearch={handleSearch} isLoading={isSearching} />
+          <SearchBar onSearch={(query, filters) => handleSearch(query, filters)} isLoading={isSearching} />
           
           {hasSearched ? (
-            <VideoList 
-              videos={videos} 
-              loading={isSearching} 
-              onDownloadComplete={loadDownloadHistory}
-              downloadHistory={downloadHistory}
-              viewedVideos={viewedVideos}
-              setViewedVideos={setViewedVideos}
-            />
+            <>
+              <VideoList 
+                videos={videos} 
+                loading={isSearching} 
+                onDownloadComplete={loadDownloadHistory}
+                downloadHistory={downloadHistory}
+                viewedVideos={viewedVideos}
+                setViewedVideos={setViewedVideos}
+              />
+              
+              {videos.length > 0 && (
+                <div className="flex justify-between items-center mt-6 pb-6">
+                  <div className="text-sm text-gray-600">
+                    Showing {((currentPage - 1) * 12) + 1} - {Math.min(currentPage * 12, totalResults)} of {totalResults} results
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange('prev')}
+                      disabled={!prevPageToken}
+                      leftIcon={<ChevronLeft className="h-4 w-4" />}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange('next')}
+                      disabled={!nextPageToken}
+                      rightIcon={<ChevronRight className="h-4 w-4" />}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="py-16 flex flex-col items-center justify-center text-center">
               <div className="mb-4 text-red-600">
