@@ -80,12 +80,12 @@ app.post('/api/download', async (req, res) => {
   
   const hasFfmpeg = await checkFfmpeg();
   
-  // Format options with 1080p for video
+  // Format options for best quality video and audio
   const formatOption = format === 'audio' 
-    ? '-x --audio-format mp3 --audio-quality 0' 
+    ? '--format bestaudio --extract-audio --audio-format mp3 --audio-quality 0' 
     : hasFfmpeg 
-      ? '-f "bestvideo[height<=1080]+bestaudio" --merge-output-format mp4'
-      : '-f "best[height<=1080]" --merge-output-format mp4';
+      ? '--format "bestvideo*[height<=1080]+bestaudio/best[height<=1080]" --merge-output-format mp4 --prefer-free-formats'
+      : '--format "best[height<=1080]" --merge-output-format mp4';
   
   const command = `yt-dlp ${formatOption} -o "${outputPath}" ${videoUrl}`;
   
