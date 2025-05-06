@@ -21,6 +21,15 @@ app.use(cors());
 app.use(express.json());
 app.use('/downloads', express.static(downloadsDir));
 
+// Store download progress
+const downloadProgress = new Map();
+
+// Get download progress
+app.get('/api/download/progress/:videoId', (req, res) => {
+  const progress = downloadProgress.get(req.params.videoId) || { progress: 0, status: 'waiting' };
+  res.json(progress);
+});
+
 // Get download history
 app.get('/api/downloads', (req, res) => {
   fs.readdir(downloadsDir, (err, files) => {
@@ -34,7 +43,7 @@ app.get('/api/downloads', (req, res) => {
         filename: file,
         downloadedAt: stats.mtime,
         size: stats.size,
-        videoId: file.split('_')[0] // Extract videoId from filename
+        videoId: file.split('_')[0]
       };
     });
     
@@ -87,33 +96,49 @@ app.post('/api/download', async (req, res) => {
       ? '--format "bestvideo*[height<=1080]+bestaudio/best[height<=1080]" --merge-output-format mp4 --prefer-free-formats'
       : '--format "best[height<=1080]" --merge-output-format mp4';
   
-  const command = `yt-dlp ${formatOption} -o "${outputPath}" ${videoUrl}`;
+  downloadProgress.set(videoId, { progress: 0, status: 'downloading' });
   
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error: ${error.message}`);
-      return res.status(500).json({ error: error.message });
+  const command = `yt-dlp ${formatOption} --progress-template "progress:%(progress._percent)s" -o "${outputPath}" ${videoUrl}`;
+  
+  const downloadProcess = exec(command);
+  
+  downloadProcess.stdout.on('data', (data) => {
+    const match = data.match(/progress:(\d+(\.\d+)?)/);
+    if (match) {
+      const progress = parseFloat(match[1]);
+      downloadProgress.set(videoId, { progress, status: 'downloading' });
     }
-    
-    if (stderr) {
-      console.error(`stderr: ${stderr}`);
+  });
+  
+  downloadProcess.on('close', (code) => {
+    if (code === 0) {
+      downloadProgress.set(videoId, { progress: 100, status: 'complete' });
+      
+      // Find the downloaded file
+      fs.readdir(downloadsDir, (err, files) => {
+        if (err) {
+          downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Failed to read downloads directory' });
+          return res.status(500).json({ error: 'Failed to read downloads directory' });
+        }
+        
+        const downloadedFile = files.find(file => file.includes(videoId));
+        
+        if (!downloadedFile) {
+          downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Downloaded file not found' });
+          return res.status(404).json({ error: 'Downloaded file not found' });
+        }
+        
+        const fileUrl = `/downloads/${downloadedFile}`;
+        res.json({ success: true, fileUrl });
+      });
+    } else {
+      downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Download failed' });
+      res.status(500).json({ error: 'Download failed' });
     }
-    
-    // Find the downloaded file
-    fs.readdir(downloadsDir, (err, files) => {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to read downloads directory' });
-      }
-      
-      const downloadedFile = files.find(file => file.includes(videoId));
-      
-      if (!downloadedFile) {
-        return res.status(404).json({ error: 'Downloaded file not found' });
-      }
-      
-      const fileUrl = `/downloads/${downloadedFile}`;
-      res.json({ success: true, fileUrl });
-    });
+  });
+  
+  downloadProcess.stderr.on('data', (data) => {
+    console.error(`stderr: ${data}`);
   });
 });
 

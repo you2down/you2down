@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { SearchParams, SearchResponse, VideoItem } from '../types';
+import { SearchParams, SearchResponse, VideoItem, DownloadProgress } from '../types';
 
 const API_KEY = 'AIzaSyD0uyYqy1oknHLlbL5tzRiuxC4D4-LB6EE';
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
@@ -26,7 +26,7 @@ export const searchVideos = async (params: SearchParams): Promise<SearchResponse
         publishedAfter,
         publishedBefore,
         pageToken,
-        order: 'date', // Always sort by date to get newest videos first
+        order: 'date',
         key: API_KEY
       }
     });
@@ -102,6 +102,16 @@ export const downloadVideo = async (videoId: string, format: 'video' | 'audio', 
     return response.data.fileUrl;
   } catch (error) {
     console.error('Error downloading video:', error);
+    throw error;
+  }
+};
+
+export const getDownloadProgress = async (videoId: string): Promise<DownloadProgress> => {
+  try {
+    const response = await axios.get(`http://localhost:3001/api/download/progress/${videoId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting download progress:', error);
     throw error;
   }
 };

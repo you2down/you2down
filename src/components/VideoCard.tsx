@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download, Clock, Eye, ThumbsUp, User, Play, X, CheckCircle2 } from 'lucide-react';
 import { VideoItem } from '../types';
 import Button from './ui/Button';
 import { formatDate, formatDuration, formatViewCount } from '../utils/helpers';
 import Select from './ui/Select';
-import { downloadVideo } from '../services/youtube';
+import { downloadVideo, getDownloadProgress } from '../services/youtube';
 import toast from 'react-hot-toast';
 
 interface VideoCardProps {
@@ -27,10 +27,42 @@ const VideoCard: React.FC<VideoCardProps> = ({
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [localIsDownloaded, setLocalIsDownloaded] = useState(isDownloaded);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout;
+
+    if (isDownloading) {
+      progressInterval = setInterval(async () => {
+        try {
+          const progress = await getDownloadProgress(video.id.videoId);
+          setDownloadProgress(progress.progress);
+
+          if (progress.status === 'complete') {
+            setIsDownloading(false);
+            clearInterval(progressInterval);
+          } else if (progress.status === 'error') {
+            setIsDownloading(false);
+            clearInterval(progressInterval);
+            toast.error(progress.error || 'Download failed');
+          }
+        } catch (error) {
+          console.error('Error checking progress:', error);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [isDownloading, video.id.videoId]);
 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
+      setDownloadProgress(0);
       const fileUrl = await downloadVideo(video.id.videoId, downloadFormat, video.snippet.title);
       setDownloadUrl(fileUrl);
       setLocalIsDownloaded(true);
@@ -39,7 +71,6 @@ const VideoCard: React.FC<VideoCardProps> = ({
     } catch (error) {
       toast.error('Failed to download. Please try again.');
       console.error('Download error:', error);
-    } finally {
       setIsDownloading(false);
     }
   };
@@ -129,36 +160,47 @@ const VideoCard: React.FC<VideoCardProps> = ({
           {video.snippet.description}
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Select
-            className="sm:w-1/2"
-            options={[
-              { value: 'video', label: 'Video (1080p MP4)' },
-              { value: 'audio', label: 'Audio (MP3)' }
-            ]}
-            value={downloadFormat}
-            onChange={(e) => setDownloadFormat(e.target.value as 'video' | 'audio')}
-          />
-          
-          {downloadUrl ? (
-            <a
-              href={`http://localhost:3001${downloadUrl}`}
-              download
-              className="sm:w-1/2 inline-flex items-center justify-center bg-green-600 text-white h-10 px-4 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download Now
-            </a>
-          ) : (
-            <Button
-              className="sm:w-1/2"
-              onClick={handleDownload}
-              isLoading={isDownloading}
-              leftIcon={<Download className="h-4 w-4" />}
-            >
-              Download
-            </Button>
+        <div className="flex flex-col gap-3">
+          {isDownloading && (
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+              <div
+                className="bg-red-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
           )}
+          
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              className="sm:w-1/2"
+              options={[
+                { value: 'video', label: 'Video (1080p MP4)' },
+                { value: 'audio', label: 'Audio (MP3)' }
+              ]}
+              value={downloadFormat}
+              onChange={(e) => setDownloadFormat(e.target.value as 'video' | 'audio')}
+            />
+            
+            {downloadUrl ? (
+              <a
+                href={`http://localhost:3001${downloadUrl}`}
+                download
+                className="sm:w-1/2 inline-flex items-center justify-center bg-green-600 text-white h-10 px-4 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Now
+              </a>
+            ) : (
+              <Button
+                className="sm:w-1/2"
+                onClick={handleDownload}
+                isLoading={isDownloading}
+                leftIcon={<Download className="h-4 w-4" />}
+              >
+                {isDownloading ? `Downloading ${Math.round(downloadProgress)}%` : 'Download'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
