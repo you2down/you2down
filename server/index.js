@@ -81,7 +81,7 @@ app.post('/api/download', async (req, res) => {
   // Format options for best quality video and audio
   const formatOption = format === 'audio' 
     ? '--format bestaudio --extract-audio --audio-format mp3 --audio-quality 0' 
-    : '--format "bv*[height>=720]+ba/b[height>=720]" --merge-output-format mp4 --no-resize';
+    : '-f "((bv*[fps>30]/bv*)[height>=720]/(wv*[fps>30]/wv*)) + ba"';
   
   downloadProgress.set(videoId, { progress: 0, status: 'downloading' });
   
