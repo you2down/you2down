@@ -5,7 +5,7 @@ import VideoList from '../components/VideoList';
 import { VideoItem } from '../types';
 import { searchVideos, getDownloadHistory, clearDownloadHistory, downloadVideo } from '../services/youtube';
 import toast, { Toaster } from 'react-hot-toast';
-import { Trash2, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 interface DownloadHistory {
@@ -65,6 +65,12 @@ const Home: React.FC = () => {
     } catch (error) {
       toast.error('Failed to clear download history');
     }
+  };
+
+  const handleClearViewedHistory = () => {
+    setViewedVideos(new Set());
+    localStorage.removeItem('viewedVideos');
+    toast.success('Viewed history cleared successfully');
   };
 
   const handleRedownload = async (videoId: string, title: string) => {
@@ -142,7 +148,7 @@ const Home: React.FC = () => {
       
       <main className="flex-grow container mx-auto px-4 py-6">
         <div className="max-w-5xl mx-auto">
-          <div className="mb-6 flex justify-between items-center">
+          <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
                 Download YouTube Videos
@@ -151,12 +157,25 @@ const Home: React.FC = () => {
                 Search for any YouTube video, select your preferred format, and download with just a click.
               </p>
             </div>
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              {showHistory ? 'Hide History' : 'Show History'}
-            </button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                {showHistory ? 'Hide History' : 'Show History'}
+              </Button>
+              {viewedVideos.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearViewedHistory}
+                  leftIcon={<Eye className="h-4 w-4" />}
+                >
+                  Clear Viewed
+                </Button>
+              )}
+            </div>
           </div>
           
           {showHistory && (
