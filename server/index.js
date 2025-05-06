@@ -76,57 +76,80 @@ app.post('/api/download', async (req, res) => {
 
   const sanitizedTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  const outputPath = path.join(downloadsDir, `${videoId}_${sanitizedTitle}.%(ext)s`);
-  
-  // Format options for best quality video and audio
-  const formatOption = format === 'audio' 
-    ? '--format bestaudio --extract-audio --audio-format mp3 --audio-quality 0' 
-    : '-f "((bv*[fps>30]/bv*)[height>=720]/(wv*[fps>30]/wv*)) + ba"';
+  const outputPath = path.join(downloadsDir, `${videoId}_${sanitizedTitle}.mp4`);
   
   downloadProgress.set(videoId, { progress: 0, status: 'downloading' });
   
-  const command = `yt-dlp ${formatOption} --progress-template "progress:%(progress._percent)s" -o "${outputPath}" ${videoUrl}`;
+  // Download best quality video and audio separately, then merge
+  const tempVideoPath = path.join(downloadsDir, `${videoId}_temp_video.mp4`);
+  const tempAudioPath = path.join(downloadsDir, `${videoId}_temp_audio.m4a`);
   
-  const downloadProcess = exec(command);
+  const downloadVideo = `yt-dlp -f "bv*[ext=mp4][height>=720]" --progress-template "progress:%(progress._percent)s" -o "${tempVideoPath}" ${videoUrl}`;
+  const downloadAudio = `yt-dlp -f "ba[ext=m4a]" --progress-template "progress:%(progress._percent)s" -o "${tempAudioPath}" ${videoUrl}`;
+  const mergeCommand = `ffmpeg -i "${tempVideoPath}" -i "${tempAudioPath}" -c:v copy -c:a aac "${outputPath}"`;
   
-  downloadProcess.stdout.on('data', (data) => {
-    const match = data.match(/progress:(\d+(\.\d+)?)/);
-    if (match) {
-      const progress = parseFloat(match[1]);
-      downloadProgress.set(videoId, { progress, status: 'downloading' });
-    }
-  });
-  
-  downloadProcess.on('close', (code) => {
-    if (code === 0) {
-      downloadProgress.set(videoId, { progress: 100, status: 'complete' });
+  try {
+    // Download video
+    await new Promise((resolve, reject) => {
+      const process = exec(downloadVideo);
       
-      // Find the downloaded file
-      fs.readdir(downloadsDir, (err, files) => {
-        if (err) {
-          downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Failed to read downloads directory' });
-          return res.status(500).json({ error: 'Failed to read downloads directory' });
+      process.stdout.on('data', (data) => {
+        const match = data.match(/progress:(\d+(\.\d+)?)/);
+        if (match) {
+          const progress = parseFloat(match[1]) * 0.4; // 40% for video download
+          downloadProgress.set(videoId, { progress, status: 'downloading video' });
         }
-        
-        const downloadedFile = files.find(file => file.includes(videoId));
-        
-        if (!downloadedFile) {
-          downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Downloaded file not found' });
-          return res.status(404).json({ error: 'Downloaded file not found' });
-        }
-        
-        const fileUrl = `/downloads/${downloadedFile}`;
-        res.json({ success: true, fileUrl });
       });
-    } else {
-      downloadProgress.set(videoId, { progress: 0, status: 'error', error: 'Download failed' });
-      res.status(500).json({ error: 'Download failed' });
-    }
-  });
-  
-  downloadProcess.stderr.on('data', (data) => {
-    console.error(`stderr: ${data}`);
-  });
+      
+      process.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error('Video download failed'));
+      });
+    });
+    
+    // Download audio
+    await new Promise((resolve, reject) => {
+      const process = exec(downloadAudio);
+      
+      process.stdout.on('data', (data) => {
+        const match = data.match(/progress:(\d+(\.\d+)?)/);
+        if (match) {
+          const progress = 40 + parseFloat(match[1]) * 0.4; // 40% for audio download
+          downloadProgress.set(videoId, { progress, status: 'downloading audio' });
+        }
+      });
+      
+      process.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error('Audio download failed'));
+      });
+    });
+    
+    // Merge video and audio
+    downloadProgress.set(videoId, { progress: 80, status: 'merging' });
+    await new Promise((resolve, reject) => {
+      exec(mergeCommand, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
+    
+    // Clean up temporary files
+    fs.unlinkSync(tempVideoPath);
+    fs.unlinkSync(tempAudioPath);
+    
+    downloadProgress.set(videoId, { progress: 100, status: 'complete' });
+    res.json({ success: true, fileUrl: `/downloads/${videoId}_${sanitizedTitle}.mp4` });
+  } catch (error) {
+    console.error('Download error:', error);
+    downloadProgress.set(videoId, { progress: 0, status: 'error', error: error.message });
+    
+    // Clean up any temporary files
+    if (fs.existsSync(tempVideoPath)) fs.unlinkSync(tempVideoPath);
+    if (fs.existsSync(tempAudioPath)) fs.unlinkSync(tempAudioPath);
+    
+    res.status(500).json({ error: 'Download failed' });
+  }
 });
 
 // Start the server
