@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { SearchParams, SearchResponse, VideoItem, DownloadProgress } from '../types';
 
-const API_KEY = 'AIzaSyD0uyYqy1oknHLlbL5tzRiuxC4D4-LB6EE';
+const API_KEY = 'AIzaSyDE1M48cG2Roinitbp8ZvQBVKLyCIQ6Pz8';
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 export const searchVideos = async (params: SearchParams): Promise<SearchResponse> => {
