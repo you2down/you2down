@@ -66,15 +66,6 @@ app.delete('/api/downloads', (req, res) => {
   });
 });
 
-// Check if ffmpeg is installed
-const checkFfmpeg = () => {
-  return new Promise((resolve) => {
-    exec('ffmpeg -version', (error) => {
-      resolve(!error);
-    });
-  });
-};
-
 // Endpoint to download a YouTube video
 app.post('/api/download', async (req, res) => {
   const { videoId, format, title } = req.body;
@@ -87,14 +78,10 @@ app.post('/api/download', async (req, res) => {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const outputPath = path.join(downloadsDir, `${videoId}_${sanitizedTitle}.%(ext)s`);
   
-  const hasFfmpeg = await checkFfmpeg();
-  
   // Format options for best quality video and audio
   const formatOption = format === 'audio' 
     ? '--format bestaudio --extract-audio --audio-format mp3 --audio-quality 0' 
-    : hasFfmpeg 
-      ? '--format "bestvideo*[height<=1080]+bestaudio/best[height<=1080]" --merge-output-format mp4 --prefer-free-formats'
-      : '--format "best[height<=1080]" --merge-output-format mp4';
+    : '--format "bv*[height>=720]+ba/b[height>=720]" --merge-output-format mp4 --no-resize';
   
   downloadProgress.set(videoId, { progress: 0, status: 'downloading' });
   
