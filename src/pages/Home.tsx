@@ -142,7 +142,7 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Toaster position="top-right" />
       <Header />
       
@@ -150,10 +150,10 @@ const Home: React.FC = () => {
         <div className="max-w-5xl mx-auto">
           <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Download YouTube Videos
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Search for any YouTube video, select your preferred format, and download with just a click.
               </p>
             </div>
@@ -179,9 +179,9 @@ const Home: React.FC = () => {
           </div>
           
           {showHistory && (
-            <div className="mb-8 bg-white rounded-lg shadow p-4">
+            <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Download History</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Download History</h3>
                 {downloadHistory.length > 0 && (
                   <Button
                     variant="outline"
@@ -196,40 +196,40 @@ const Home: React.FC = () => {
               
               {downloadHistory.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Title
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300  uppercase tracking-wider">
                           Downloaded
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Size
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {downloadHistory.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 text-sm text-gray-900">
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
                             <a 
                               href={`https://www.youtube.com/watch?v=${item.videoId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="hover:text-red-600"
+                              className="hover:text-red-600 dark:hover:text-red-400"
                             >
                               {item.title}
                             </a>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {new Date(item.downloadedAt).toLocaleString()}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {formatFileSize(item.size)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -237,13 +237,13 @@ const Home: React.FC = () => {
                               <a
                                 href={`/downloads/${item.filename}`}
                                 download
-                                className="text-blue-600 hover:text-blue-800"
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                               >
                                 Download
                               </a>
                               <button
                                 onClick={() => handleRedownload(item.videoId, item.title || '')}
-                                className="text-green-600 hover:text-green-800 flex items-center"
+                                className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 flex items-center"
                                 disabled={isDownloading === item.videoId}
                               >
                                 {isDownloading === item.videoId ? (
@@ -263,7 +263,7 @@ const Home: React.FC = () => {
                   </table>
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">No downloads yet</p>
+                <p className="text-gray-500 dark:text-gray-400 text-center py-4">No downloads yet</p>
               )}
             </div>
           )}
@@ -283,7 +283,7 @@ const Home: React.FC = () => {
               
               {videos.length > 0 && (
                 <div className="flex justify-between items-center mt-6 pb-6">
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
                     Showing {((currentPage - 1) * 12) + 1} - {Math.min(currentPage * 12, totalResults)} of {totalResults} results
                   </div>
                   <div className="flex gap-2">
@@ -311,7 +311,7 @@ const Home: React.FC = () => {
             </>
           ) : (
             <div className="py-16 flex flex-col items-center justify-center text-center">
-              <div className="mb-4 text-red-600">
+              <div className="mb-4 text-red-600 dark:text-red-500">
                 <svg
                   className="w-16 h-16"
                   fill="none"
@@ -326,8 +326,8 @@ const Home: React.FC = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Start by searching for a video</h3>
-              <p className="text-gray-600 max-w-md">
+              <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Start by searching for a video</h3>
+              <p className="text-gray-600 dark:text-gray-400 max-w-md">
                 Enter keywords in the search box above to find videos. You can use filters to narrow down your results.
               </p>
             </div>
@@ -335,7 +335,7 @@ const Home: React.FC = () => {
         </div>
       </main>
       
-      <footer className="mt-auto bg-gray-800 text-gray-300 py-6">
+      <footer className="mt-auto bg-gray-800 dark:bg-gray-900 text-gray-300 py-6">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm">

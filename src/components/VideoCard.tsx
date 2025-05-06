@@ -83,7 +83,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
       <div className="aspect-video relative group">
         {showPreview ? (
           <div className="relative w-full h-full">
@@ -137,11 +137,11 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </div>
       
       <div className="p-4">
-        <h3 className="text-lg font-semibold line-clamp-2 mb-2">
+        <h3 className="text-lg font-semibold line-clamp-2 mb-2 text-gray-900 dark:text-white">
           {video.snippet.title}
         </h3>
         
-        <div className="flex items-center text-sm text-gray-600 mb-3">
+        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-3">
           <User className="h-3 w-3 mr-1" />
           <span className="mr-3">{video.snippet.channelTitle}</span>
           
@@ -156,13 +156,13 @@ const VideoCard: React.FC<VideoCardProps> = ({
           <span>{formatDate(video.snippet.publishedAt)}</span>
         </div>
         
-        <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
           {video.snippet.description}
         </p>
         
         <div className="flex flex-col gap-3">
           {isDownloading && (
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
               <div
                 className="bg-red-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${downloadProgress}%` }}

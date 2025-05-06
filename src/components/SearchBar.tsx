@@ -42,7 +42,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
   };
 
   return (
-    <div className="w-full bg-gray-50 py-6 px-4 sm:px-6 rounded-lg shadow-sm">
+    <div className="w-full bg-gray-50 dark:bg-gray-800 py-6 px-4 sm:px-6 rounded-lg shadow-sm">
       <form onSubmit={handleSearch}>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-grow">
@@ -74,7 +74,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
 
         <div className="mt-4">
           <div className="flex gap-4 items-center">
-            <label className="text-sm font-medium text-gray-700">Video Type:</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Video Type:</label>
             <div className="flex gap-4">
               {['videos', 'shorts', 'both'].map((type) => (
                 <label key={type} className="inline-flex items-center">
@@ -84,9 +84,9 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
                     value={type}
                     checked={filters.videoType === type}
                     onChange={handleFilterChange}
-                    className="form-radio h-4 w-4 text-red-600 focus:ring-red-500"
+                    className="form-radio h-4 w-4 text-red-600 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600"
                   />
-                  <span className="ml-2 text-sm text-gray-700 capitalize">{type}</span>
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300 capitalize">{type}</span>
                 </label>
               ))}
             </div>
